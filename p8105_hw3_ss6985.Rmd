@@ -9,6 +9,7 @@ output: github_document
 library(tidyverse)
 library(p8105.datasets)
 library(ggridges)
+library(patchwork)
 
 knitr::opts_chunk$set(
 	echo = TRUE,
@@ -75,6 +76,7 @@ noaatidy_df = ny_noaa |>
           "12" = "December"
     ))
 ```
+
 In the data cleaning step, we cleaned the variables names, created separate variables for year, month, and day, and converted these variables to numeric variables. Additionally, variables measured in tenths of units were converted into just units (e.g., `tmin` was measured in tenths of degrees C and converted into degrees C). 
 
 ```{r}
@@ -82,6 +84,7 @@ noaatidy_df |>
   count(snow) |>
   arrange(desc(n))
 ```
+
 For snowfall, the most commonly observed value is O (no recorded snowfall on most days in NY state). This makes sense because snowfall only occurs during certain times of the year and in specific conditions (i.e., there are many days with no snowfall, and a small window for possible snow). The second most commonly observed value is `NA`, suggesting missingness. 
 
 
@@ -100,6 +103,7 @@ ggplot(avg_temp_df, aes(x = year, y = avg_tmax, group = id)) + geom_point() + ge
     y = "Average Max Temperature (°C)",
   ) 
 ```
+
 The two-panel plot shows the average maximum temperature in January and July across years by station. July temperatures remain stable around 25–30°C, with fewer outliers (e.g., one possible at about 14ºC), overall ranging from about 20ºC and 35ºC. Seasonal patterns are evident in January, while July shows less variation. January temperatures fluctuate more (within approximately -10 to 10ºC), with some potential outliers (e.g., lowest max temperature at about -14ºC). There does not appear to be a significant difference in average max temperatures in July or January throughout the years. The average temperatures in January (winter month) are also lower than in July (summer month). All stations appear to follow similar trends of temperature peaks and valleys within a month across the years.
 
 ### Making more two-panel plots: 
@@ -168,6 +172,7 @@ mims_df =
   left_join(
     covar_df, accel_df, by = c("seqn"))
 ```
+
 Accelerometer data was collected on 250 participants in the NHANES study. I loaded, tidied, merged, and organized two datasets to create a single `mims_df` dataset. The first dataset, `nhanes_covar`, contained participants' demographic data, and the second dataset, `nhanes_accel` contained their accelerometer data. The final dataset includes all originally observed variables, excludes participants less than 21 years of age (and those with missing demographic data), and encodes data with reasonable variable classes (i.e., not numeric, and using factors with the ordering of tables and plots in mind). The resulting dataset has `r nrow(mims_df)` rows and `r ncol(mims_df)` columns. 
 
 ```{r}
@@ -177,7 +182,8 @@ mims_df |>
   summarize(count = n()) |>
   knitr::kable()
 ```
-The above is a reader-friendly table for the number of men and women in each education category. We can see a summary of participants by sex (male or female) and education level (less than high school, high school equivalent, more than high school). For example, 23 females have a high school equivalent education, and 56 males have more than a high school education.
+
+The above is a reader-friendly table for the number of men and women in each education category. We can see a summary of participants by sex (`male` or `female`) and education level (`less than high school`, `high school equivalent`, `more than high school`). For example, 23 females have a high school equivalent education, and 56 males have more than a high school education.
 
 ```{r}
 mims_df |>
@@ -188,7 +194,8 @@ mims_df |>
        x = "Education") 
 str(mims_df)
 ```
-The boxplot visualization shows the age distribution for men and women in different education categories. In the "less than high school" and "high school equivalent" categories, females have a slightly higher median age compared to males. In the "more than high school" category, the median ages of men and women are quite similar (with the male median age slightly higher), both around the mid-40s. There is also considerable overlap in the age distributions of men and women across all education categories (i.e., age patterns between the sexes remain somewhat consistent regardless of education level). 
+
+The boxplot visualization shows the age distribution for men and women in different education categories. In the `less than high school` and `high school equivalent` categories, females have a slightly higher median age compared to males. In the "more than high school" category, the median ages of men and women are quite similar (with the male median age slightly higher), both around the mid-40s. There is also considerable overlap in the age distributions of men and women across all education categories (i.e., age patterns between the sexes remain somewhat consistent regardless of education level). 
 
 ```{r}
 total_activity_df = mims_df |>
@@ -206,6 +213,21 @@ total_activity_df |>
     y = "Total Activity (MIMS)",
   ) 
 ```
-I created a total activity variable for each participant, and plotted these total activities (y-axis) against age (x-axis). The plot compares men to women for each education level. Generally, across all education levels, total activity tends to decrease with age. Within each education level, females and males tend to follow similar patterns in changes in total activity as they age. Generally, females have more total activity than males, with some small exceptions (e.g., the "less than high school" education level shows males with higher total activity, in general, after the age of approximately 50). 
+
+I created a `total_activity_df` variable for each participant, and plotted these total activities (y-axis) against age (x-axis). The plot compares men to women for each education level. Generally, across all education levels, total activity tends to decrease with age. Within each education level, females and males tend to follow similar patterns in changes in total activity as they age. Generally, females have more total activity than males, with some small exceptions (e.g., the `less than high school` education level shows males with higher total activity, in general, after the age of approximately 50). 
+
+```{r}
+ggplot(mims_df, aes(x = min, y = mims, group = seqn, color = sex)) +
+  geom_line(alpha = .2) +
+  geom_smooth(aes(group = sex), se = FALSE) +
+  facet_grid(. ~ education) +
+  labs(
+    title = "24-Hour Activity by Education Level and Sex",
+    x = "Minute of Day",
+    y = "Total Activity (MIMS)",
+  )
+```
+
+I created a three-panel plot showing the 24-hour activity time courses for each education level (color indicates sex). All groups show similar daily activity trend (i.e., peaking in the morning/late afternoon at around 750 minutes, suggests that participants are most active at these times, with low activity during nighttime hours). For both `less than high school` and `high school equivalent` education levels, males and females show similar activity patterns throughout the day (same for `more than high school`, but seems females consistently are more active than males starting at about 250 minutes). Those with `more than high school` education show the most pronounced activity spikes (heightened physical engagement) especially in the late morning and early afternoon.
 
 
