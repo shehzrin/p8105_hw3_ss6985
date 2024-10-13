@@ -228,6 +228,44 @@ ggplot(mims_df, aes(x = min, y = mims, group = seqn, color = sex)) +
   )
 ```
 
-I created a three-panel plot showing the 24-hour activity time courses for each education level (color indicates sex). All groups show similar daily activity trend (i.e., peaking in the morning/late afternoon at around 750 minutes, suggests that participants are most active at these times, with low activity during nighttime hours). For both `less than high school` and `high school equivalent` education levels, males and females show similar activity patterns throughout the day (same for `more than high school`, but seems females consistently are more active than males starting at about 250 minutes). Those with `more than high school` education show the most pronounced activity spikes (heightened physical engagement) especially in the late morning and early afternoon.
+I created a three-panel plot showing the 24-hour activity time courses for each education level (color indicates sex). All groups show similar daily activity trend (i.e., peaking in the morning/late afternoon at around 750 minutes, suggests that participants are most active at these times, with low activity during nighttime hours). For both `less than high school` and `high school equivalent` education levels, males and females show similar activity patterns throughout the day (same for `more than high school`, but seems females consistently are more active than males starting at about 250 minutes up until near the end of the day). Those with `more than high school` education show the most pronounced activity spikes (heightened physical engagement) especially in the late morning and early afternoon.
+
+
+## Problem 3
+
+```{r}
+jan2020_df = 
+   read_csv("citibike/Jan 2020 Citi.csv", na = c("NA",".","")) |>
+  janitor::clean_names() |>
+  mutate(year = 2020,
+         month = 1)
+
+jan2024_df = 
+   read_csv("citibike/Jan 2024 Citi.csv", na = c("NA",".","")) |>
+  janitor::clean_names() |>
+  mutate(year = 2024,
+         month = 1)
+
+july2020_df = 
+   read_csv("citibike/July 2020 Citi.csv", na = c("NA",".","")) |>
+  janitor::clean_names() |>
+  mutate(year = 2024,
+         month = 7)
+
+july2024_df = 
+   read_csv("citibike/July 2024 Citi.csv", na = c("NA",".","")) |>
+  janitor::clean_names() |>
+  mutate(year = 2024,
+         month = 7)
+
+
+citibike_df = bind_rows(jan2020_df, july2020_df, jan2024_df, july2024_df) |>
+  mutate(
+    rideable_type = as.factor(rideable_type),
+    member_casual = as.factor(member_casual),
+    weekdays = factor(weekdays, levels = c("Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday")))
+```
+
+I merged four datasets that each contained 1% of all NYC Citi Bike system rides with a total duration less than four hours for four different months (Jan 2020, Jan 2024, July 2020, July 2024). I created `year` and `month` variables to each dataset prior to combining to keep track of which dataset each observation came from. The resulting dataset has `r nrow(citibike_df)` rows and `r ncol(citibike_df)` columns, and includes the variables `ride_id`, `rideable_type`, `weekday`, `duration`, `start_station_name`, `end_station_name`, `member_casual`, `year`, and `month` for each individual ride. There is a total of `r count(citibike_df)` rides recorded with a mean ride duration of `r mean(pull(citibike_df,duration))`. There are `r citibike_df |> distinct(start_station_name) |> count()` distinct starting stations. 
 
 
