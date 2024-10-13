@@ -133,4 +133,40 @@ The first two-panel plot (hex plot) shows the `tmax` vs `tmin` for the full data
 The second two-panel plot shows the distribution of snowfall (values greater than 0 and less than 100) separately by year. The ridgeline plot shows a multimodal density of snowfall within a given year and distributions across years with most snowfall events concentrated around 0-35mm. There is a another group of stations that see about 45mm of snow and another group that sees nearly 80 mm. The overall patterns suggests a fairly consistent distribution of snowfall values with some variability across the years. 
 
 
+## Problem 2
+```{r}
+covar_df = read_csv("nhanes_covar.csv", na = c("NA", ".", ""), skip = 4) |> 
+  janitor::clean_names() |>
+  filter(age >= 21) |>
+  mutate(
+    sex = case_match(
+      sex, 
+      1 ~ "male",
+      2 ~ "female"),
+    education = case_match(
+      education, 
+      1 ~ "less than high school",
+      2 ~ "high school equivalent",
+      3 ~ "more than high school"),
+    age = as.numeric(age),  
+    BMI = as.numeric(bmi)
+  )
+
+accel_df = read_csv("nhanes_accel.csv", na = c("NA", ".", "")) |> 
+  janitor::clean_names() |>
+  pivot_longer(
+    min1:min1440,
+    names_to = "min",
+    values_to = "mims",
+    names_prefix = "min"
+  ) |>
+  mutate(
+    min = as.numeric(min)
+  )
+
+mims_df = 
+  left_join(
+    covar_df, accel_df, by = c("seqn"))
+```
+Accelerometer data was collected on 250 participants in the NHANES study. I loaded, tidied, merged, and organized two datasets. The first dataset, `nhanes_covar`, contains participants' demographic data, and the second dataset, `nhanes_accel` contains their accelerometer data. The final dataset includes all originally observed variables, excludes participants less than 21 years of age (and those with missing demographic data), and encodes data with reasonable variable classes (i.e., not numeric, and using factors with the ordering of tables and plots in mind). The resulting dataset has `r nrow(mims_df)` rows and `r ncol(mims_df)` columns. 
 
