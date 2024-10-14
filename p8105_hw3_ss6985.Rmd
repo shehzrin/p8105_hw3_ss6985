@@ -238,34 +238,100 @@ jan2020_df =
    read_csv("citibike/Jan 2020 Citi.csv", na = c("NA",".","")) |>
   janitor::clean_names() |>
   mutate(year = 2020,
-         month = 1)
+         month = "January") |>
+   relocate(year, month, .before = ride_id)
 
 jan2024_df = 
    read_csv("citibike/Jan 2024 Citi.csv", na = c("NA",".","")) |>
   janitor::clean_names() |>
   mutate(year = 2024,
-         month = 1)
+         month = "January") |>
+   relocate(year, month, .before = ride_id)
 
 july2020_df = 
    read_csv("citibike/July 2020 Citi.csv", na = c("NA",".","")) |>
   janitor::clean_names() |>
-  mutate(year = 2024,
-         month = 7)
+  mutate(year = 2020,
+         month = "July") |>
+   relocate(year, month, .before = ride_id)
 
 july2024_df = 
    read_csv("citibike/July 2024 Citi.csv", na = c("NA",".","")) |>
   janitor::clean_names() |>
   mutate(year = 2024,
-         month = 7)
+         month = "July") |>
+   relocate(year, month, .before = ride_id)
 
 
 citibike_df = bind_rows(jan2020_df, july2020_df, jan2024_df, july2024_df) |>
   mutate(
-    rideable_type = as.factor(rideable_type),
-    member_casual = as.factor(member_casual),
-    weekdays = factor(weekdays, levels = c("Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday")))
+    weekdays = factor(weekdays, levels = c("Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"), ordered = TRUE))
 ```
 
-I merged four datasets that each contained 1% of all NYC Citi Bike system rides with a total duration less than four hours for four different months (Jan 2020, Jan 2024, July 2020, July 2024). I created `year` and `month` variables to each dataset prior to combining to keep track of which dataset each observation came from. The resulting dataset has `r nrow(citibike_df)` rows and `r ncol(citibike_df)` columns, and includes the variables `ride_id`, `rideable_type`, `weekday`, `duration`, `start_station_name`, `end_station_name`, `member_casual`, `year`, and `month` for each individual ride. There is a total of `r count(citibike_df)` rides recorded with a mean ride duration of `r mean(pull(citibike_df,duration))`. There are `r citibike_df |> distinct(start_station_name) |> count()` distinct starting stations. 
+I merged four datasets that each contained 1% of all NYC Citi Bike system rides with a total duration less than four hours for four different months (Jan 2020, Jan 2024, July 2020, July 2024). I created `year` and `month` variables to each dataset prior to combining to keep track of which dataset each observation came from. The resulting dataset has `r nrow(citibike_df)` rows and `r ncol(citibike_df)` columns, and includes the variables `year`, `month`, `ride_id`, `rideable_type`, `weekday`, `duration`, `start_station_name`, `end_station_name`, and `member_casual` for each individual ride. There is a total of `r count(citibike_df)` rides recorded with a mean ride duration of `r mean(pull(citibike_df,duration))`. There are `r citibike_df |> distinct(start_station_name) |> count()` distinct starting stations. 
 
+```{r}
+summary_df = citibike_df |>
+  group_by(year, month, member_casual) |>
+  summarize(count = n()) |>
+  knitr::kable()
 
+summary_df
+```
+
+This above is a reader-friendly table showing the total number of rides in each combination of year and month separating casual riders and Citi Bike members. Each combination of month and year shows that members more frequently ride the bike than casual individuals (e.g., in January 2020, casual riders took 984 rides while members took 11,436 rides.) Overall, there were a lot more riders in 2024 than 2020, with the highest amount of rides in July 2024 and the lowest amount of rides in January 2020. 
+
+```{r}
+jul2024_df = citibike_df |>
+  filter(month == "July" & year == "2024") |>
+  group_by(start_station_name) |>
+  summarize(count = n()) |>
+  arrange(desc(count)) |>
+  head(5) |>
+  knitr::kable()
+
+jul2024_df
+```
+
+The above is a table showing the five most popular starting stations for July 2024 (including the number of rides originating from these stations). 
+
+```{r}
+med_duration_df = citibike_df |>
+  group_by(year, month, weekdays) |>
+  mutate(median_duration = median(duration)) |> 
+  ggplot(aes(x = weekdays, y = median_duration, fill = as.factor(year))) + 
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_grid(~month) + 
+  theme(axis.text = element_text(angle = 45, vjust = 1, hjust = 1))
+
+med_duration_df
+```
+
+I made a plot to investigate the effects of day of the week, month, and year on median ride duration. Referring to the plot, 2020 has higher median durations than 2024 (especially in July). In July of 2020, people tended to take the longest bike rides. The plot suggests an overall trend of shorter rides over the years. The shorter ride duration in January compared to July could be because of the colder (less-rideable) weather. There is a slight increase in ride duration on the on Saturday and Sunday (except for Sundays in Jan 2024)
+
+```{r}
+bike2024_df = citibike_df |>
+  filter(year == 2024) |>
+  ggplot(aes(x = month, y = duration, fill = rideable_type)) +
+  geom_boxplot() + 
+  facet_grid(~member_casual)
+
+bike2024_df
+
+bike2024_df = citibike_df |> 
+  filter(year == 2024) |>
+  ggplot(aes(x = member_casual, y = duration, fill = rideable_type)) +
+  geom_boxplot(outlier.shape = NA) +
+  facet_grid(~ month) +
+    scale_y_continuous(limits = c(0, 50)) + 
+  labs(
+    title = "Distribution of Ride Duration by Month, Membership Status, and Bike Type (2024)",
+    x = "Membership Status",
+    y = "Ride Duration (minutes)",
+    fill = "Bike Type"
+  ) 
+
+bike2024_df
+```
+
+The above figure shows the impact of month, membership status, and bike type on the distribution of ride duration. There were a large number of longer ride outliers present across all box plots, before I used `geom_boxplot(outlier.shape = NA)` to clean up the figure. Generally, casual riders have longer ride durations than members in January and July for both bike types. Classic bikes tend to have longer ride durations compared to electric bikes for casual riders. The durations are more consistent within the member group across bike type and month. In July, ride durations are generally higher for both membership types and bike types compared to January. 
